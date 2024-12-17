@@ -11,10 +11,18 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from user import User, Habit
 from datetime import datetime
+import pickle
 
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
+        self.users = {}
+        try:
+            with open("data.pkl", "rb") as file:
+                loaded_data = pickle.load(file)
+            self.users = loaded_data
+        except:
+            print("file does not exist")
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(428, 600)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -170,19 +178,28 @@ class Ui_MainWindow(object):
         self.back3_main_btn = QtWidgets.QPushButton(self.habit_tab)
         self.back3_main_btn.setObjectName("back3_main_btn")
         self.verticalLayout_7.addWidget(self.back3_main_btn)
+
         self.verticalLayout_12.addLayout(self.verticalLayout_7)
         self.tab_vidget.addTab(self.habit_tab, "")
         self.verticalLayout.addWidget(self.tab_vidget)
         self.verticalLayout_8.addLayout(self.verticalLayout)
+
         MainWindow.setCentralWidget(self.centralwidget)
+
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.tab_vidget.setCurrentIndex(3)
+        self.tab_vidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+
+        self.reg_btn.clicked.connect(lambda: self.to_reg_tab())
+        self.anonim_btn.clicked.connect(lambda: self.to_main_tab())
+        self.back_btn.clicked.connect(lambda: self.to_enter_tab())
+        self.enter_btn.clicked.connect(lambda: self.enter_check())
+        self.save_btn.clicked.connect(lambda: self.save_user())
         self.test_user = User('nagibator228', '1234')
         self.test_user.add_habbit('Курение')
         self.test_user.add_habbit('Тервер')
@@ -208,23 +225,25 @@ class Ui_MainWindow(object):
     def on_item_clicked(self, item):
         pass
 
+    
+
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.enter_log_pas.setText(_translate("MainWindow", "TextLabel"))
-        self.login_label.setText(_translate("MainWindow", "TextLabel"))
-        self.password_label.setText(_translate("MainWindow", "TextLabel"))
-        self.reg_success.setText(_translate("MainWindow", "TextLabel"))
+        self.enter_log_pas.setText(_translate("MainWindow", "Authorization"))
+        self.login_label.setText(_translate("MainWindow", "Enter login:"))
+        self.password_label.setText(_translate("MainWindow", "Enter password:"))
+        self.reg_success.setText(_translate("MainWindow", ""))
         self.enter_btn.setText(_translate("MainWindow", "Enter"))
         self.reg_btn.setText(_translate("MainWindow", "Registration"))
         self.anonim_btn.setText(_translate("MainWindow", "Anonim enter"))
         self.tab_vidget.setTabText(self.tab_vidget.indexOf(self.enter_tab), _translate("MainWindow", "enter_tab"))
-        self.reg_login_label.setText(_translate("MainWindow", "TextLabel"))
-        self.reg_password_label.setText(_translate("MainWindow", "TextLabel"))
-        self.reg_password2_label.setText(_translate("MainWindow", "TextLabel"))
-        self.save_btn.setText(_translate("MainWindow", "PushButton"))
-        self.back_btn.setText(_translate("MainWindow", "PushButton"))
+        self.reg_login_label.setText(_translate("MainWindow", "Enter login"))
+        self.reg_password_label.setText(_translate("MainWindow", "Enter password"))
+        self.reg_password2_label.setText(_translate("MainWindow", "Repeat password"))
+        self.save_btn.setText(_translate("MainWindow", "Save"))
+        self.back_btn.setText(_translate("MainWindow", "Back to enter"))
         self.tab_vidget.setTabText(self.tab_vidget.indexOf(self.reg_tab), _translate("MainWindow", "reg_tab"))
         self.add_habit_btn.setText(_translate("MainWindow", "PushButton"))
         self.back_main_btn.setText(_translate("MainWindow", "PushButton"))
@@ -235,6 +254,44 @@ class Ui_MainWindow(object):
         self.delete_habit_btn.setText(_translate("MainWindow", "PushButton"))
         self.back3_main_btn.setText(_translate("MainWindow", "PushButton"))
         self.tab_vidget.setTabText(self.tab_vidget.indexOf(self.habit_tab), _translate("MainWindow", "habit_tab"))
+
+    def to_reg_tab(self):
+        self.tab_vidget.setCurrentIndex(1)
+
+    def to_main_tab(self):
+        self.tab_vidget.setCurrentIndex(2)
+
+    def to_enter_tab(self):
+        self.tab_vidget.setCurrentIndex(0)
+
+    def enter_check(self):
+        _translate = QtCore.QCoreApplication.translate
+        login = self.login_edit.text()
+        password = self.password_edit.text()
+        if login in self.users and self.users[login].check_password(password):
+            self.to_main_tab()
+        else:
+            self.reg_success.setText(_translate("MainWindow", "Wrong login or password"))
+
+    def save_user(self):
+        _translate = QtCore.QCoreApplication.translate
+        login = self.reg_line_login.text()
+        first_password = self.reg_line_passw.text()
+        second_password = self.reg_line_passw2.text()
+        if login not in self.users and first_password == second_password:
+            self.users[login] = User(login, first_password)
+            self.save_to_file()
+            self.reg_success.setText(_translate("MainWindow", "Registration is successful"))
+            self.to_enter_tab()
+        elif login in self.users:
+            self.reg_login_label.setText(_translate("MainWindow", "The username is already occupied"))
+        else:
+            self.reg_password2_label.setText(_translate("MainWindow", "Passwords don't match"))
+
+    def save_to_file(self):
+        with open("data.pkl", "wb") as file:
+            pickle.dump(self.users, file)
+
 
 
 if __name__ == "__main__":
