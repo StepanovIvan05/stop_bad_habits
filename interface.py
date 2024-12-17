@@ -9,6 +9,8 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from user import User, Habit
+from datetime import datetime
 
 
 class Ui_MainWindow(object):
@@ -116,14 +118,21 @@ class Ui_MainWindow(object):
         self.verticalLayout_11.setObjectName("verticalLayout_11")
         self.verticalLayout_6 = QtWidgets.QVBoxLayout()
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.scroll_habits = QtWidgets.QScrollArea(self.main_tab)
-        self.scroll_habits.setWidgetResizable(True)
+        # self.scroll_habits = QtWidgets.QScrollArea(self.main_tab)
+        # self.scroll_habits.setWidgetResizable(True)
+        # self.scroll_habits.setObjectName("scroll_habits")
+        # self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        # self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 362, 454))
+        # self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        # self.scroll_habits.setWidget(self.scrollAreaWidgetContents)
+        # self.verticalLayout_6.addWidget(self.scroll_habits)
+        # Создаем QListWidget вместо QScrollArea
+        self.scroll_habits = QtWidgets.QListWidget(self.main_tab)
         self.scroll_habits.setObjectName("scroll_habits")
-        self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 362, 454))
-        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.scroll_habits.setWidget(self.scrollAreaWidgetContents)
+
+        # Добавляем QListWidget в вертикальный layout
         self.verticalLayout_6.addWidget(self.scroll_habits)
+
         self.add_habit_btn = QtWidgets.QPushButton(self.main_tab)
         self.add_habit_btn.setObjectName("add_habit_btn")
         self.verticalLayout_6.addWidget(self.add_habit_btn)
@@ -174,6 +183,32 @@ class Ui_MainWindow(object):
         self.tab_vidget.setCurrentIndex(3)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+        self.test_user = User('nagibator228', '1234')
+        self.test_user.add_habbit('Курение')
+        self.test_user.add_habbit('Тервер')
+
+        self.current_habit = None
+
+        self.back_main_btn.clicked.connect(self.back_to_register)
+        self.scroll_habits.itemClicked.connect(self.on_item_clicked)
+
+        self.anonim_btn.clicked.connect(self.to_habits)
+
+    def back_to_register(self):
+        self.tab_vidget.setCurrentIndex(0)
+
+    def to_habits(self):
+        for i in self.test_user.habits_list:
+            now = i.start_date.strftime("%Y-%m-%d %H:%M:%S")
+            item = QtWidgets.QListWidgetItem(i.name + '\t\t' + now)
+            item.habit_data = i  # Добавляем кастомное поле
+            self.scroll_habits.addItem(item)
+
+
+    def on_item_clicked(self, item):
+        pass
+
+
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
@@ -204,6 +239,7 @@ class Ui_MainWindow(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
