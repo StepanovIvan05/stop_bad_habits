@@ -11,13 +11,17 @@ class User:
     def add_habbit(self, name, count_relapse=0):
         self.habits_list.append(Habit(name, count_relapse))
 
-    def delete_habbit(self, habbit):
+    def add_comm(self, text, habit):
+        var = self.habits_list[self.habits_list.index(habit)]
+        var.add_comment(text)
+
+    def delete_habbit(self, habit):
         """
         тут еще не знаю как лучше привычку или индекс привычки в списке
-        :param habbit: привычка или индекс
+        :param habit: привычка или индекс
         :return:
         """
-        pass
+        self.habits_list.remove(habit)
 
     def get_login(self):
         """
@@ -77,15 +81,4 @@ class Habit:
         :return:
         """
         self.count_relapse += 1
-        end_time = time.time()
-        elapsed_time = end_time - self.start_time
-        self.start_time = end_time
-        return elapsed_time
-
-
-
-
-
-
-
-
+        self.start_time = time.time()
