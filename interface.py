@@ -9,12 +9,34 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from user import User, Habit
-from datetime import datetime
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QInputDialog, QMessageBox, QFileDialog
+from user import User
+import time
 import pickle
+from PyQt5.QtCore import QTimer
 
 
-class Ui_MainWindow(object):
+def get_user_input(title, label):
+    """
+    Открывает диалоговое окно для ввода текста от пользователя.
+
+    Аргументы:
+        title (str): Заголовок окна диалога.
+        label (str): Текстовое сообщение с запросом для пользователя.
+
+    Возвращает:
+        str или bool: Введённый текст или False/None если ввод отменён.
+    """
+    text, ok = QInputDialog.getText(MainWindow, title, label)
+    if ok and text:  # Проверяем, нажал ли пользователь OK и ввёл ли текст
+        return text
+    elif not ok:
+        return False
+    return None  # Возвращаем None, если ввод не был осуществлён
+
+
+class Ui_MainWindow(QMainWindow):
     def setupUi(self, MainWindow):
         self.users = {}
         try:
@@ -161,13 +183,18 @@ class Ui_MainWindow(object):
         self.time_label = QtWidgets.QLabel(self.habit_tab)
         self.time_label.setObjectName("time_label")
         self.verticalLayout_7.addWidget(self.time_label)
-        self.scroll_comments_label = QtWidgets.QScrollArea(self.habit_tab)
-        self.scroll_comments_label.setWidgetResizable(True)
+        self.add_relapse_btn = QtWidgets.QPushButton(self.habit_tab)
+        self.add_relapse_btn.setObjectName("add_relapse_btn")
+        self.verticalLayout_7.addWidget(self.add_relapse_btn)
+        # self.scroll_comments_label = QtWidgets.QScrollArea(self.habit_tab)
+        # self.scroll_comments_label.setWidgetResizable(True)
+        # self.scroll_comments_label.setObjectName("scroll_comments_label")
+        # self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
+        # self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 380, 387))
+        # self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
+        # self.scroll_comments_label.setWidget(self.scrollAreaWidgetContents_2)
+        self.scroll_comments_label = QtWidgets.QListWidget(self.habit_tab)
         self.scroll_comments_label.setObjectName("scroll_comments_label")
-        self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 380, 387))
-        self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
-        self.scroll_comments_label.setWidget(self.scrollAreaWidgetContents_2)
         self.verticalLayout_7.addWidget(self.scroll_comments_label)
         self.add_comment_btn = QtWidgets.QPushButton(self.habit_tab)
         self.add_comment_btn.setObjectName("add_comment_btn")
@@ -194,39 +221,99 @@ class Ui_MainWindow(object):
         self.tab_vidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+        #self.current_habit = None
+        self.current_user = None
+
 
         self.reg_btn.clicked.connect(lambda: self.to_reg_tab())
         self.anonim_btn.clicked.connect(lambda: self.to_main_tab())
         self.back_btn.clicked.connect(lambda: self.to_enter_tab())
         self.enter_btn.clicked.connect(lambda: self.enter_check())
         self.save_btn.clicked.connect(lambda: self.save_user())
-        self.test_user = User('nagibator228', '1234')
-        self.test_user.add_habbit('Курение')
-        self.test_user.add_habbit('Тервер')
+        self.add_habit_btn.clicked.connect(self.add_new_habit)
 
-        self.current_habit = None
+        self.add_comment_btn.clicked.connect(self.add_comment)
+        self.back3_main_btn.clicked.connect(self.back_to_main)
+        self.delete_habit_btn.clicked.connect(self.delete_habit)
+        self.add_relapse_btn.clicked.connect(self.relapse)
+
 
         self.back_main_btn.clicked.connect(self.back_to_register)
         self.scroll_habits.itemClicked.connect(self.on_item_clicked)
 
-        self.anonim_btn.clicked.connect(self.to_habits)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_time_label)
+
+    def add_comment(self):
+        text = get_user_input('Add comment', 'Enter comment')
+        self.current_user.add_comm(text, self.current_habit)
+        self.scroll_comments_label.addItem(text)
+        self.save_to_file()
+
+    def delete_habit(self):
+        self.current_user.delete_habbit(self.current_habit)
+        self.to_habits()
+        self.tab_vidget.setCurrentIndex(2)
+        self.scroll_comments_label.clear()
+        self.timer.stop()
+        self.save_to_file()
+
+    def relapse(self):
+        self.current_habit.add_relapse()
+        txt = self.current_habit.name + '\t\tRelapses: ' + str(self.current_habit.count_relapse)
+        self.name_habit_label.setText(txt)
+        self.save_to_file()
+
+    def back_to_main(self):
+        self.scroll_comments_label.clear()
+        self.timer.stop()
+        self.tab_vidget.setCurrentIndex(2)
 
     def back_to_register(self):
+        self.current_user = None
         self.tab_vidget.setCurrentIndex(0)
 
     def to_habits(self):
-        for i in self.test_user.habits_list:
+        self.scroll_habits.clear()
+        self.current_habit = None
+        for i in self.current_user.habits_list:
             now = i.start_date.strftime("%Y-%m-%d %H:%M:%S")
             item = QtWidgets.QListWidgetItem(i.name + '\t\t' + now)
             item.habit_data = i  # Добавляем кастомное поле
             self.scroll_habits.addItem(item)
 
+    def add_new_habit(self):
+        text = get_user_input("Add habit", "Enter name of habit")
+        self.current_user.add_habbit(text)
+        self.to_habits()
+        self.save_to_file()
 
     def on_item_clicked(self, item):
-        pass
+        self.current_habit = item.habit_data
+        txt = self.current_habit.name + '\t\tRelapses: ' + str(self.current_habit.count_relapse)
+        self.name_habit_label.setText(txt)
+        for i in self.current_habit.comments:
+             self.scroll_comments_label.addItem(i)
+        self.tab_vidget.setCurrentIndex(3)
+        self.timer.start(1000)
+        self.update_time_label()
 
-    
+    def update_time_label(self):
+        elapsed_time = int(time.time() - self.current_habit.start_time)  # Вычисляем прошедшее время
+        readable_time = self.format_time(elapsed_time)  # Форматируем в читаемый вид
+        self.time_label.setText(f"Tracking time: {readable_time}")
 
+    @staticmethod
+    def format_time(seconds):
+        # Преобразуем секунды в дни, часы, минуты и секунды
+        days = seconds // 86400
+        hours = (seconds % 86400) // 3600
+        minutes = (seconds % 3600) // 60
+        seconds = seconds % 60
+        if days > 0:
+            return f"{days} d, {hours:02}:{minutes:02}:{seconds:02}"
+        else:
+            return f"{hours:02}:{minutes:02}:{seconds:02}"
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -245,14 +332,14 @@ class Ui_MainWindow(object):
         self.save_btn.setText(_translate("MainWindow", "Save"))
         self.back_btn.setText(_translate("MainWindow", "Back to enter"))
         self.tab_vidget.setTabText(self.tab_vidget.indexOf(self.reg_tab), _translate("MainWindow", "reg_tab"))
-        self.add_habit_btn.setText(_translate("MainWindow", "PushButton"))
-        self.back_main_btn.setText(_translate("MainWindow", "PushButton"))
+        self.add_habit_btn.setText(_translate("MainWindow", "Add habit"))
+        self.back_main_btn.setText(_translate("MainWindow", "Back"))
         self.tab_vidget.setTabText(self.tab_vidget.indexOf(self.main_tab), _translate("MainWindow", "main_tab"))
-        self.name_habit_label.setText(_translate("MainWindow", "TextLabel"))
-        self.time_label.setText(_translate("MainWindow", "TextLabel"))
-        self.add_comment_btn.setText(_translate("MainWindow", "уорцимпоыи"))
-        self.delete_habit_btn.setText(_translate("MainWindow", "PushButton"))
-        self.back3_main_btn.setText(_translate("MainWindow", "PushButton"))
+        self.name_habit_label.setText(_translate("MainWindow", " "))
+        self.time_label.setText(_translate("MainWindow", " "))
+        self.add_comment_btn.setText(_translate("MainWindow", "Add comment"))
+        self.delete_habit_btn.setText(_translate("MainWindow", "Delete habit"))
+        self.back3_main_btn.setText(_translate("MainWindow", "Back"))
         self.tab_vidget.setTabText(self.tab_vidget.indexOf(self.habit_tab), _translate("MainWindow", "habit_tab"))
 
     def to_reg_tab(self):
@@ -269,6 +356,8 @@ class Ui_MainWindow(object):
         login = self.login_edit.text()
         password = self.password_edit.text()
         if login in self.users and self.users[login].check_password(password):
+            self.current_user = self.users[login]
+            self.to_habits()
             self.to_main_tab()
         else:
             self.reg_success.setText(_translate("MainWindow", "Wrong login or password"))
